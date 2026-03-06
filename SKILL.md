@@ -1,6 +1,6 @@
 ---
 name: ml-debugging
-description: "Practical folklore for debugging ML systems: convergence issues, loss surface analysis, gradient analysis, sweep methodology, and same-seed comparisons. Use when stuck on training, designing sweeps, or analyzing experiment results."
+description: "Wassname's practical folklore for debugging ML systems: convergence issues, loss surface analysis, gradient analysis, sweep methodology, and same-seed comparisons. Use when stuck on training, designing sweeps, or analyzing experiment results."
 ---
 
 # ML Debugging Folklore
