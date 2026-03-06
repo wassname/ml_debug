@@ -93,7 +93,7 @@ logger.log("grad_norm", grad_norm)
 assert torch.isfinite(loss), f"Loss is {loss}"
 
 # Verify custom gradients (use float64! relative error plummets from 1e-2 to 1e-8)
-torch.autograd.gradcheck(my_custom_fn, inputs.double())
+torch.autograd.gradcheck(my_custom_fn, inputs.double().requires_grad_(True))
 ```
 
 Gradient clipping *masks* problems -- always log the pre-clip norm to see if it's constantly being triggered. [CS231n: "the ratio of the update magnitudes to the value magnitudes... should be somewhere around 1e-3."]
@@ -340,9 +340,9 @@ When a loss isn't behaving as expected, don't guess -- visualize the loss surfac
 ```py
 # ── 2D loss surface with gradient quiver ──────
 def analyze_component(loss_fn, x_range, y_range, n=80):
-    xs = linspace(*x_range, n)
-    ys = linspace(*y_range, n)
-    X, Y = meshgrid(xs, ys)
+    xs = torch.linspace(*x_range, n)
+    ys = torch.linspace(*y_range, n)
+    X, Y = torch.meshgrid(xs, ys, indexing='ij')
     x_flat = X.flatten().requires_grad_(True)
     y_flat = Y.flatten().requires_grad_(True)
 

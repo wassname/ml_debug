@@ -281,13 +281,13 @@ For heat exchangers with phase change, the T(h) mapping from REFPROP/GERG-2008 m
        def forward(ctx, h):
            T = pchip_interp(h.detach().numpy())  # scipy
            ctx.save_for_backward(h)
-           return torch.tensor(T, dtype=h.dtype)
+           return torch.tensor(T, dtype=h.dtype, device=h.device)
 
        @staticmethod
        def backward(ctx, grad_output):
            h, = ctx.saved_tensors
-           dTdh = pchip_interp.derivative()(h.detach().numpy())  # scipy
-           return grad_output * torch.tensor(dTdh, dtype=h.dtype)
+           dTdh = pchip_interp.derivative()(h.detach().cpu().numpy())  # scipy
+           return grad_output * torch.tensor(dTdh, dtype=h.dtype, device=h.device)
    ```
 5. Use float64 throughout. float32 loses precision near the phase boundary where dT/dh is small.
 
