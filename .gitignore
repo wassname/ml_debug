@@ -1,0 +1,10 @@
+# Personal notes
+docs/wassname.md
+
+# Internal dev specs (implementation notes, not useful publicly)
+docs/spec/
+
+# Book chapters (copyright, not redistributable)
+docs/evidence/goodfellow_ch11_practical_methodology.md
+docs/evidence/goodfellow_ch15_representation_learning.md
+docs/evidence/deeplearning_book.md
