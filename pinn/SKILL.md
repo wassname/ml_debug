@@ -1,5 +1,5 @@
 ---
-name: pinn-debug
+name: pinn
 description: "PINN (Physics-Informed Neural Network) training best practices and debugging. Use when building, debugging, or optimizing PINNs for PDEs, ODEs, or physics-constrained learning problems. Sub-skill of ml-debugging."
 ---
 

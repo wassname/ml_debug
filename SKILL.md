@@ -1,5 +1,5 @@
 ---
-name: ml_debug
+name: ml-debug
 description: "Wassname's practical folklore for debugging ML systems: convergence issues, loss surface analysis, gradient analysis, sweep methodology, and same-seed comparisons. Use when stuck on training, designing sweeps, or analyzing experiment results."
 ---
 
