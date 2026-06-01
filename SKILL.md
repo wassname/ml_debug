@@ -21,6 +21,7 @@ Roughly in this order, but the point is the mindset, not ticking boxes:
 
 **Collect clues before theorizing.** Read the traceback and logs. Run static analysis (Part 6.1) and the cheap diagnostics (Part 6.2: data sanity check, init-loss check, overfit-one-batch). You are a detective at a scene, not a fortune teller. If you catch yourself proposing a fix before you've looked at anything, stop.
 
+<!-- FIXME research-journal skill is not public remove or add -->
 **Hold several hypotheses at once; resist converging early.** Unless the cause is already obvious (a traceback usually points right at it), generate a few genuinely different explanations before ranking any of them, so you don't marry the first one that comes to mind. Part 7.1 has five lenses for generating them -- information flow, ablation, oracle substitution, learning curves, structural ceiling. Then sanity-check yourself with the failure-mode triplet (same idiom as the `research-journal` skill):
 - *Likely*: your strongest competitor explanation, with a rough credence.
 - *Subtle*: the sneaky one -- sample size, leakage, a confound, a metric artifact, or plain seed variance masquerading as signal.
@@ -28,9 +29,14 @@ Roughly in this order, but the point is the mindset, not ticking boxes:
 
 Anchor priors on what's usually wrong (Part 7.2: data ~40%, loss ~20%, training ~15%, architecture ~10%, hyperparameters ~5%) -- but priors are a starting weight, not a verdict. A clue that points elsewhere overrides them outright: a traceback naming a line, a metric stuck while the loss is healthy (loss-metric misalignment, not data), or an init-loss that's exactly right all redirect you regardless of the ~40% data prior.
 
-**Run the cheapest observation that splits your top hypotheses.** Not the most thorough experiment -- the most *discriminating* one (Rahtz: think more, experiment less, Part 1). One log line or one toy run that tells hypothesis A from B beats a 4-hour sweep that only confirms what you already believed.
+Make sure to seperate observations (to be faithfully reprocuded in an audtiable manner) and inferences. That way you can go back and rethink things without degrading the evidence.
 
-**Then act, and only on what the observation pointed to.** If a cycle or two hasn't localized it, stop tuning and go read working code (next section) -- that's a stronger move than another guess.
+
+**Run the cheapest observation that splits your top hypotheses.** Not the most thorough experiment -- the most *discriminating* one (Rahtz: think more, experiment less, Part 1). One log line or one toy run that tells hypothesis A from B beats a 4-hour sweep that only confirms what you already believed. 
+
+But before you run a 10 minute test, remember it's much faster to step back, and have good priors before you start running experiments. It's also good to rank multiple possible diagnostics and think about how much you learn, vs how much they cost in code complexity and gpu time. You want to pick ones where the learning is worth the cost.
+
+**Then act, and only on what the observation pointed to.** If a cycle or two hasn't localized it, stop tuning and go read working code (next section) -- that's a better than another guess.
 
 Consult as reference, from inside this loop, never as a first move: triage tree (Part 6.3), hypothesis-generating lenses (Part 7.1), the metric-stuck decision tree (Part 5), RL specifics (`rl/SKILL.md`).
 
@@ -472,6 +478,8 @@ If gradient is nonzero and the parameter CAN change the metric:
 | large | large | no | Competing losses or optimizer inertia. Isolate. |
 | large | large | yes | The term helps but converges to same basin. Coincidence or weak effect. |
 
+Note this is just a guide and in no way authorititive, it might not apply to your project.
+
 ---
 
 ## Part 6: LLM Debugging Playbook
@@ -490,6 +498,7 @@ Concrete procedures for an LLM agent debugging ML code. Work top-to-bottom: stat
 
 Follow top-to-bottom. Stop at the first match.
 
+TODO (human) just make itindented bullets
 ```
 START
   |
@@ -552,9 +561,11 @@ START
   Log everything (Part 1 Step 3) and pursue anomalies.
 ```
 
+Again this is just a guide and in no way authorititive, it might not apply to your project.
+
 ### 6.4 LLM anti-patterns
 
-These are the overconfident reflexes the "calibrate" section warns about, made concrete. Every one of them changes behaviour before localizing the bug, so each is a guess wearing a fix's clothes.
+These are the overconfident reflexes the "calibrate" section warns about, made concrete. Every one of them changes behaviour before localizing the bug, so each is a guess wearing a fix's clothes. Some people say "this is sklean slop", or "the LLM is acting like it's tweaking hyperparameters in a hackathon, not understanding the problem"
 
 - Hyperparameter changes before verifying correctness. "Try reducing the learning rate" is the #1 wrong response to any training problem. Verify the code is correct first (Parts 1-2); HP tuning on buggy code wastes time.
 - try/except around training code. Training should crash loudly. A caught exception hides the bug and produces silently wrong results. The one exception is checkpoint saving on KeyboardInterrupt.
@@ -670,3 +681,6 @@ Large batch training with high LR diverges at the start. Warm up LR linearly ove
 | Training smooth but slow, poor generalization | Batch too large without LR scaling. Try higher LR or smaller batch. |
 | Loss spikes at start then recovers | Normal with large batch + warmup. If no warmup: add it. |
 | Different results at different batch sizes (same total steps) | Missing LR scaling. Adjust LR proportionally. |
+
+
+TODO add list of docs/evidence for further reading, or turn the above into proper links
