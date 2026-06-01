@@ -13,12 +13,43 @@ Practitioner knowledge that's hard to find in papers. Distilled from Schulman's 
 
 The core problem in RL (and to a lesser extent supervised ML): errors aren't local [Jones 2021]. In RL, information flows in a loop (actor -> learner -> actor), so a numerical bug in one spot gets smeared through the whole system in seconds. From outside, everything goes weird at once -- loss explodes, KL collapses, rewards oscillate. You can tell something's wrong but not *what* or *where*.
 
-**When debugging, work in this order:**
-1. Run static analysis (grep for silent bugs) -- Part 6.1
-2. Run diagnostics (data check, init loss, overfit-one-batch) -- Part 6.2
-3. Follow the triage decision tree -- Part 6.3
-4. Use mental models to brainstorm hypotheses -- Part 7
-5. Only then read Parts 1-5 for deeper understanding of specific issues
+## Before you debug: calibrate
+
+If you're an LLM agent reading this, the most useful thing it can tell you is about *you*, not the bug. ML research code is often outside your training distribution -- novel losses, custom architectures, methods that don't have a canonical "right answer" you've seen a thousand times. Your trained reflex there is to be confident and fast: pattern-match a symptom to a fix ("loss stuck -> drop the LR") and apply it. That reflex is the enemy. It commits to one hypothesis before you've looked, and a wrong fix on possibly-buggy code wastes a run *and* corrupts your evidence about what's actually happening.
+
+So slow down and widen out. The discipline below isn't a recipe that outputs a fix; it's a set of habits for staying calibrated and keeping your hypothesis space open until the evidence -- not your prior -- closes it. The habits transfer across timeseries, GANs, OCR, RL, PINNs, puzzles; the specific fixes in the tables below do not, so treat those tables as a menu of hypotheses to widen your search, never as a lookup-and-apply.
+
+## The debugging loop (judgment, not a checklist)
+
+Roughly in this order, but the point is the mindset, not ticking boxes:
+
+**Collect clues before theorizing.** Read the traceback and logs. Run static analysis (Part 6.1) and the cheap diagnostics (Part 6.2: data sanity check, init-loss check, overfit-one-batch). You are a detective at a scene, not a fortune teller. If you catch yourself proposing a fix before you've looked at anything, stop.
+
+**Hold several hypotheses at once; resist converging early.** Unless the cause is already obvious (a traceback usually points right at it), generate a few genuinely different explanations before ranking any of them, so you don't marry the first one that comes to mind. Part 7.1 has five lenses for generating them -- information flow, ablation, oracle substitution, learning curves, structural ceiling. Then sanity-check yourself with the failure-mode triplet (same idiom as the `research-journal` skill):
+- *Likely*: your strongest competitor explanation, with a rough credence.
+- *Subtle*: the sneaky one -- sample size, leakage, a confound, a metric artifact, or plain seed variance masquerading as signal.
+- *Null*: there's no real effect, or it comes from something else you also changed.
+
+Anchor priors on what's usually wrong (Part 7.2: data ~40%, loss ~20%, training ~15%, architecture ~10%, hyperparameters ~5%) -- but priors are a starting weight, not a verdict.
+
+**Run the cheapest observation that splits your top hypotheses.** Not the most thorough experiment -- the most *discriminating* one (Rahtz: think more, experiment less, Part 1). One log line or one toy run that tells hypothesis A from B beats a 4-hour sweep that only confirms what you already believed.
+
+**Then act, and only on what the observation pointed to.** If a cycle or two hasn't localized it, stop tuning and go read working code (next section) -- that's a stronger move than another guess.
+
+Consult as reference, from inside this loop, never as a first move: triage tree (Part 6.3), hypothesis-generating lenses (Part 7.1), the metric-stuck decision tree (Part 5), RL specifics (`rl/SKILL.md`).
+
+## When stuck, read a working implementation
+
+After 1-2 diagnostic cycles that don't localize the bug -- or whenever you're building something you haven't built before -- stop guessing and go read code that already works. Agents tend to skip this in favour of another round of from-scratch guessing, which is usually the worse bet.
+
+Use the `gh` skill to find an implementation. Rank candidates by trust signal (per CLAUDE.md): community adoption > papers citing it > open source code that runs > author reputation > self-reports. A repo other researchers use as a baseline is worth more than a flashy README.
+
+Read it for three things, explicitly:
+1. **The algorithm done right.** Diff your math and your computation graph against theirs. The bug is usually something "trivial" -- a sign, a reset, an off-by-one in indexing, an advantage normalization you skipped.
+2. **The engineering tricks they don't mention in the paper.** Did they normalize the input? tanh instead of ReLU? mean-pool instead of last-token? only 6 layers? clip to stop gradient saturation? warm-start? an easier dataset than yours? These are the difference between "works" and "doesn't," and they live in the code, not the abstract.
+3. **Proven hyperparameters, schedule, and optimizer.** Copy the values that are known to work before you tune your own. Their LR, warmup, batch size, weight decay, and optimizer choice are a working starting point you get for free.
+
+Reference implementations are domain-specific. For RL, see `rl/SKILL.md` section 9 (spinning-up, stable-baselines3, cleanrl, OpenSpiel). For everything, diff against the reference rather than trusting your from-scratch version (Part 7.3).
 
 ---
 
@@ -521,31 +552,16 @@ START
 
 ### 6.4 LLM anti-patterns
 
-Things an LLM should NOT suggest when debugging ML code.
+These are the overconfident reflexes the "calibrate" section warns about, made concrete. Every one of them changes behaviour before localizing the bug, so each is a guess wearing a fix's clothes.
 
-**Don't suggest hyperparameter changes before verifying correctness.**
-"Try reducing the learning rate" is the #1 wrong response to any training problem. Verify the code is correct first (Parts 1-2). HP tuning on buggy code wastes time.
-
-**Don't add try/except around training code.**
-Training code should crash loudly. A caught exception in a training loop hides the bug and produces silently wrong results. The only exception: checkpoint saving on KeyboardInterrupt.
-
-**Don't suggest "try a different optimizer" as a debugging step.**
-If Adam doesn't converge, the problem is almost never the optimizer choice. It's the loss, the data, the architecture, or a bug.
-
-**Don't add .detach() or .item() to "fix" gradient errors.**
-If autograd complains, something is wrong with the computation graph. Adding .detach() silences the error by cutting gradient flow -- it doesn't fix anything, it makes the model stop learning from that path. Understand why autograd is complaining first.
-
-**Don't suggest lr_scheduler as a fix for non-convergence.**
-Schedulers refine convergence, they don't cause it. If the model doesn't learn with constant LR, a scheduler won't help.
-
-**Don't suggest adding more layers or making the model bigger.**
-If the model can't overfit one batch, more parameters won't help. The problem is gradient flow, loss function, or data. Fix those first.
-
-**Don't suggest "normalize your data" without checking if it's already normalized.**
-Run the data sanity check (6.2) first. If data is already mean~0, std~1, normalization isn't the problem.
-
-**Don't wrap things in `float()` or `.to(dtype)` to suppress type warnings.**
-Type mismatches are signals. A float32/float64 mismatch might mean you're mixing model weights with double-precision data. Fix the root cause.
+- Hyperparameter changes before verifying correctness. "Try reducing the learning rate" is the #1 wrong response to any training problem. Verify the code is correct first (Parts 1-2); HP tuning on buggy code wastes time.
+- try/except around training code. Training should crash loudly. A caught exception hides the bug and produces silently wrong results. The one exception is checkpoint saving on KeyboardInterrupt.
+- "Try a different optimizer." If Adam doesn't converge, the cause is almost never the optimizer choice -- it's the loss, the data, the architecture, or a bug.
+- `.detach()` or `.item()` to "fix" gradient errors. If autograd complains, the computation graph is wrong. Detaching silences the error by cutting gradient flow, so the model just stops learning from that path. Understand why autograd is complaining first.
+- lr_scheduler as a cure for non-convergence. Schedulers refine convergence, they don't cause it. If the model won't learn at constant LR, a schedule won't save it.
+- More layers or a bigger model. If it can't overfit one batch, more parameters won't help -- the problem is gradient flow, loss, or data.
+- "Normalize your data" without checking whether it already is. Run the data sanity check (6.2) first; if it's already mean~0, std~1, normalization isn't your problem.
+- `float()` or `.to(dtype)` to suppress type warnings. Type mismatches are signals. A float32/float64 mismatch might mean you're mixing model weights with double-precision data. Fix the root cause.
 
 ---
 
@@ -605,19 +621,13 @@ For RL specifically, add:
 
 ### 7.3 The debugging mindset
 
-Core attitudes are covered in Part 1 ("Assume you have a bug," "Pursue anomalies," "Loss curves are a red herring") and [Part 2](rl/SKILL.md) ("Working from reference implementations"). Here are the additional mental habits not covered there:
+Core attitudes live in the top-of-skill debugging loop (calibrate, hold several hypotheses, read a working implementation when stuck) and in Part 1 ("Assume you have a bug," "Pursue anomalies," "Loss curves are a red herring"). Here are the additional mental habits not covered there:
 
-**"Think more, experiment less."** [Rahtz 2018]
-When runs take hours, spend 30-60 minutes mapping hypotheses before launching. Rank by likelihood given all evidence. Only run experiments that distinguish between your top hypotheses. Rahtz: "Switching from experimenting a lot and thinking a little to experimenting a little and thinking a lot was a key turnaround."
+MurphyJitsu pre-flight [Rahtz 2018]: before starting a run, ask "if this run fails, what's the most likely cause?" If you can name it, test for it first. It's the rationalist habit of "pre-hindsight" -- imagining the failure and working backward. This is the same move as naming the *likely* and *subtle* entries of the protocol's failure-mode triplet, applied before launch instead of after a crash.
 
-**MurphyJitsu pre-flight.** [Rahtz 2018]
-Before starting a run, ask: "If this run fails, what would the most likely cause be?" If you can name it, test for it first. This is the rationalist habit of "pre-hindsight" -- imagining the failure and working backward.
+"Tricks substitute for each other" [Schulman 2017]: many normalization and regularization tricks do roughly the same thing, so stacking them adds complexity without proportional benefit. If you have three normalization schemes and the model still doesn't work, the problem isn't normalization.
 
-**"Tricks substitute for each other."** [Schulman 2017]
-Many normalization/regularization tricks do roughly the same thing. Adding more tricks adds complexity without proportional benefit. If you have three normalization schemes and the model still doesn't work, the problem isn't normalization.
-
-**Diff against reference implementations.** [Henderson 2018, Jones 2021]
-When stuck, diff your code line-by-line against a working reference. The bug is usually in something "trivial" -- episode resets, advantage normalization, dtype. Henderson et al. 2018: "implementation differences which are often not reflected in publications can have dramatic impacts on performance." See [rl/SKILL.md section 9](rl/SKILL.md) for details.
+(Other attitudes live elsewhere: "think more, experiment less" with the work-log structure is in Part 1; diffing against a working implementation is the top-of-skill "When stuck, read a working implementation" section.)
 
 ### 7.4 When to suspect the data
 
