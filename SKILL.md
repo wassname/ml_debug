@@ -7,19 +7,19 @@ description: "Wassname's practical folklore for debugging ML systems: convergenc
 
 Practitioner knowledge that's hard to find in papers, distilled from Schulman's "Nuts and Bolts" talk, Andy Jones' debugging guide, r/reinforcementlearning threads, competition write-ups, and personal experience.
 
-The core problem: errors aren't local [Jones 2021]. Especially in RL, information flows in a loop (actor -> learner -> actor), so a numerical bug in one spot gets smeared through the whole system in seconds. From outside everything goes weird at once (loss explodes, KL collapses, rewards oscillate) and you can tell something's wrong but not *what* or *where*. That's why the discipline below leads with calibration and clue-collection, not fixes.
+The core problem: errors aren't local [Jones 2021]. Especially in RL, information flows in a loop (actor -> learner -> actor), so a numerical bug in one spot gets smeared through the whole system in seconds. From outside everything goes weird at once (loss explodes, KL collapses, rewards oscillate) and you can tell something's wrong but not *what* or *where*. That's why the discipline below leads with calibration and clue-collection before any fix.
 
 ## Before you debug: calibrate
 
-If you're an LLM agent reading this, the most useful thing it can tell you is about *you*, not the bug. ML research code is often outside your training distribution: novel losses, custom architectures, methods that don't have a canonical "right answer" you've seen a thousand times. Your trained reflex there is to be confident and fast: pattern-match a symptom to a fix ("loss stuck -> drop the LR") and apply it. That reflex is the enemy. It commits to one hypothesis before you've looked, and a wrong fix on possibly-buggy code wastes a run *and* corrupts your evidence about what's actually happening.
+If you're an LLM agent reading this, the first thing to calibrate is your own behaviour. ML research code is often outside your training distribution: novel losses, custom architectures, methods that don't have a canonical "right answer" you've seen a thousand times. Your trained reflex there is to be confident and fast: pattern-match a symptom to a fix ("loss stuck -> drop the LR") and apply it. Here that reflex works against you. It commits to one hypothesis before you've looked, and a wrong fix on possibly-buggy code wastes a run *and* corrupts your evidence about what's actually happening.
 
-So slow down and widen out. The discipline below isn't a recipe that outputs a fix; it's a set of habits for staying calibrated and keeping your hypothesis space open until the evidence, not your prior, closes it. The habits transfer across timeseries, GANs, OCR, RL, PINNs, puzzles; the specific fixes in the tables below do not, so treat those tables as a menu of hypotheses to widen your search, never as a lookup-and-apply.
+So slow down and widen out. The discipline below is a set of habits for staying calibrated and keeping your hypothesis space open until the evidence closes it. The habits transfer across timeseries, GANs, OCR, RL, PINNs, puzzles; the specific fixes in the tables below are local to their setting, so treat those tables as a menu of hypotheses to widen your search.
 
-## The debugging loop (judgment, not a checklist)
+## The debugging loop (use judgment)
 
-Roughly in this order, but the point is the mindset, not ticking boxes:
+Roughly in this order, though the point is the underlying mindset:
 
-**Collect clues before theorizing.** Read the traceback and logs. Run static analysis (Part 6.1) and the cheap diagnostics (Part 6.2: data sanity check, init-loss check, overfit-one-batch). You are a detective at a scene, not a fortune teller. If you catch yourself proposing a fix before you've looked at anything, stop.
+**Collect clues before theorizing.** Read the traceback and logs. Run static analysis (Part 6.1) and the cheap diagnostics (Part 6.2: data sanity check, init-loss check, overfit-one-batch). If you catch yourself proposing a fix before you've looked at anything, stop.
 
 **Hold several hypotheses at once; resist converging early.** Unless the cause is already obvious (a traceback usually points right at it), generate a few genuinely different explanations before ranking any of them, so you don't marry the first one that comes to mind. Part 7.1 has five lenses for generating them: information flow, ablation, oracle substitution, learning curves, structural ceiling. Then sanity-check yourself with the failure-mode triplet:
 - *Likely*: your strongest competitor explanation, with a rough credence.
@@ -28,7 +28,7 @@ Roughly in this order, but the point is the mindset, not ticking boxes:
 
 Give each a one-line prior (rough credence) and its cheapest falsifier, a `Check: ...` line naming the observation that would kill it. Those falsifiers are the menu the next step draws from.
 
-Anchor priors on what's usually wrong (Part 7.2: data ~40%, loss ~20%, training ~15%, architecture ~10%, hyperparameters ~5%), but priors are a starting weight, not a verdict. A clue that points elsewhere overrides them outright: a traceback naming a line, a metric stuck while the loss is healthy (loss-metric misalignment, not data), or an init-loss that's exactly right all redirect you regardless of the ~40% data prior.
+Anchor priors on what's usually wrong (Part 7.2: data ~40%, loss ~20%, training ~15%, architecture ~10%, hyperparameters ~5%), but priors are only a starting weight. A clue that points elsewhere overrides them outright: a traceback naming a line, a metric stuck while the loss is healthy (loss-metric misalignment), or an init-loss that's exactly right all redirect you regardless of the ~40% data prior.
 
 Make sure to separate observations (to be faithfully reproduced in an auditable manner) and inferences. That way you can go back and rethink things without degrading the evidence.
 
@@ -41,7 +41,7 @@ But before you run a 10 minute test, remember it's much faster to step back, and
 
 **Then act, and only on what the observation pointed to.** If a cycle or two hasn't localized it, stop tuning and go read working code (next section), which is usually better than another guess.
 
-Consult as reference, from inside this loop, never as a first move: triage tree (Part 6.3), hypothesis-generating lenses (Part 7.1), the metric-stuck decision tree (Part 5), RL specifics (`rl/SKILL.md`).
+Consult these only once you're inside the loop, as reference: triage tree (Part 6.3), hypothesis-generating lenses (Part 7.1), the metric-stuck decision tree (Part 5), RL specifics (`rl/SKILL.md`).
 
 The same loop in pseudocode (for humans and agents to hold in one glance):
 
@@ -53,11 +53,11 @@ def debug(symptom):
     prior ← anchor(H)              # base rates: data .40 loss .20 train .15 arch .10 hp .05
 
     while not localized:
-        # pick the test by evidence-per-cost, not thoroughness
+        # the cheapest test whose outcome the hypotheses disagree on
         t̂     ← argmax(divergence(predict(h, t) for h in H) / cost(t) for t in candidates)
         obs   ← run(t̂)            # one log line or toy run; keep obs apart from inference
-        prior ← update(prior, obs)   # a clue elsewhere overrides the prior outright
-        H     ← bisect_path(H, obs)  # forward values + backward grads, halve the search each probe
+        prior ← update(prior, obs)
+        H     ← bisect_path(H, obs)  # halve the search space each probe
         if cycles ≥ 2:
             return read_working_code()   # diff your math + graph vs a trusted impl
 
@@ -72,7 +72,7 @@ Use the `gh` skill to find an implementation. Rank candidates by trust signal (p
 
 Read it for three things, explicitly:
 1. **The algorithm done right.** Diff your math and your computation graph against theirs. The bug is usually something "trivial", like a sign, a reset, an off-by-one in indexing, or an advantage normalization you skipped.
-2. **The engineering tricks they don't mention in the paper.** Did they normalize the input? tanh instead of ReLU? mean-pool instead of last-token? only 6 layers? clip to stop gradient saturation? warm-start? an easier dataset than yours? These are the difference between "works" and "doesn't," and they live in the code, not the abstract.
+2. **The engineering tricks they don't mention in the paper.** Did they normalize the input? tanh instead of ReLU? mean-pool instead of last-token? only 6 layers? clip to stop gradient saturation? warm-start? an easier dataset than yours? These are the difference between "works" and "doesn't," and they live in the code, where papers rarely spell them out.
 3. **Proven hyperparameters, schedule, and optimizer.** Copy the values that are known to work before you tune your own. Their LR, warmup, batch size, weight decay, and optimizer choice are a working starting point you get for free.
 
 Reference implementations are domain-specific. For RL, see `rl/SKILL.md` section 9 (spinning-up, stable-baselines3, cleanrl, OpenSpiel). For everything, diff against the reference rather than trusting your from-scratch version (Part 7.3).
@@ -87,7 +87,7 @@ Most sources here are 2017-2021, predating RLHF, large-scale pretraining, and JA
 
 ### What "collect clues" looks like
 
-This is the catalog the loop's clue-collection step pulls from: the substantive checks, in rough dependency order (each assumes the one before). It's a menu to draw on, not a fresh end-to-end procedure that competes with the loop above.
+This is the catalog the loop's clue-collection step pulls from: the substantive checks, in rough dependency order (each assumes the one before). It's a menu to draw on from inside the loop above.
 
 **Step 1: Verify components in isolation.** [Goodfellow Ch11, CS229]
 Most bugs are "doing the wrong calculation." Test each piece independently.
@@ -556,7 +556,7 @@ Again this is just a guide and in no way authoritative; it might not apply to yo
 
 ### 6.4 LLM anti-patterns
 
-These are the overconfident reflexes the "calibrate" section warns about, made concrete. Every one of them changes behaviour before localizing the bug, so each is a guess wearing a fix's clothes. Some people say "this is sklearn slop", or "the LLM is acting like it's tweaking hyperparameters in a hackathon, not understanding the problem".
+These are the overconfident reflexes the "calibrate" section warns about, made concrete. Every one of them changes behaviour before localizing the bug. Some people say "this is sklearn slop", or "the LLM is acting like it's tweaking hyperparameters in a hackathon, not understanding the problem".
 
 - Hyperparameter changes before verifying correctness. "Try reducing the learning rate" is the #1 wrong response to any training problem. Verify the code is correct first (Parts 1-2); HP tuning on buggy code wastes time.
 - try/except around training code. Training should crash loudly. A caught exception hides the bug and produces silently wrong results. The one exception is checkpoint saving on KeyboardInterrupt.
