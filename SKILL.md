@@ -30,7 +30,7 @@ Give each a one-line prior (rough credence) and its cheapest falsifier -- a `Che
 
 Anchor priors on what's usually wrong (Part 7.2: data ~40%, loss ~20%, training ~15%, architecture ~10%, hyperparameters ~5%) -- but priors are a starting weight, not a verdict. A clue that points elsewhere overrides them outright: a traceback naming a line, a metric stuck while the loss is healthy (loss-metric misalignment, not data), or an init-loss that's exactly right all redirect you regardless of the ~40% data prior.
 
-Make sure to seperate observations (to be faithfully reprocuded in an audtiable manner) and inferences. That way you can go back and rethink things without degrading the evidence.
+Make sure to separate observations (to be faithfully reproduced in an auditable manner) and inferences. That way you can go back and rethink things without degrading the evidence.
 
 
 **Run the cheapest observation that splits your top hypotheses.** Not the most thorough experiment -- the most *discriminating* one (Rahtz: think more, experiment less, Part 1). To find it, forward-predict each hypothesis ("what would I see if this were the cause?"): a test is strong evidence only where the predictions diverge, and worthless where every hypothesis predicts the same outcome. Prefer the check whose result you'd bet on differently under each explanation -- a grad-norm line reading ~0 under "dead layer" but healthy under "LR too low" beats a 4-hour sweep that only confirms what you already believed. 
@@ -39,7 +39,7 @@ But before you run a 10 minute test, remember it's much faster to step back, and
 
 **Bisect the path to localize where it breaks.** Splitting hypotheses tells you which cause; bisecting tells you where. Data flows forward and gradients flow backward in a chain (input -> preprocess -> layers -> loss -> grads), so probe the midpoint instead of reading every step: is the value or gradient already wrong halfway through? Each probe halves the search space. The NaN-hunt (find the first module to produce a non-finite value, Part 6.2) is this move applied to NaNs; the same bisection localizes finite-but-wrong values, exploded grad norms, and dead activations.
 
-**Then act, and only on what the observation pointed to.** If a cycle or two hasn't localized it, stop tuning and go read working code (next section) -- that's a better than another guess.
+**Then act, and only on what the observation pointed to.** If a cycle or two hasn't localized it, stop tuning and go read working code (next section) -- that's better than another guess.
 
 Consult as reference, from inside this loop, never as a first move: triage tree (Part 6.3), hypothesis-generating lenses (Part 7.1), the metric-stuck decision tree (Part 5), RL specifics (`rl/SKILL.md`).
 
