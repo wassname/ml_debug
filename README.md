@@ -2,8 +2,6 @@
 
 In an attempt to upskill the ML debugging on AI coding assistants (and humans), I've collected high quality sources on ML debugging and the mindset and the "taste". When I started ML I went searching for discussions on best practices, and started a few discussions of my own and they helped me a lot, I hope they can help others. This intro is human written, and the below is AI written with human guidance.
 
-Practitioner knowledge for debugging ML systems, curated and synthesized by [wassname](https://github.com/wassname). Opinionated by source selection -- I picked sources I trust (Schulman, Goodfellow, CS231n, ...) and had an LLM extract the most relevant information for debugging ML systems.
-
 ## Use as a Claude skill
 
 ```
