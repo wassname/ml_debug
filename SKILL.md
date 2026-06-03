@@ -5,11 +5,7 @@ description: "Wassname's practical folklore for debugging ML systems: convergenc
 
 # wassname's ML Debugging Folklore
 
-In an attempt to upskill the ML debugging on AI coding assistants (and humans), I've collected high quality sources on ML debugging and the mindset and the "taste". When I started ML I went searching for discussions on best practices, and started a few discussions of my own and they helped me a lot, I hope they can help others. This intro is human written, and the below is AI written with human guidance.
-
-Practitioner knowledge for debugging ML systems that's hard to find in papers: convergence stalls, NaNs, gradient pathologies, stuck metrics, sweeps you can trust. It's *folklore*, so the quotes are the content; the people who learned these lessons the hard way say it better than a paraphrase can. Full sources and links are collected at the end.
-
-The core problem: errors aren't local. Especially in RL, information flows in a loop (actor -> learner -> actor), so as Jones puts it, "a numerical error in one spot gets smeared throughout the system in seconds, poisoning everything"[^jones]. Most errors then show up as *all* your metrics going weird at once (loss exploding, KL collapsing, rewards oscillating), so you can tell something's wrong but not *what* or *where*. That's why the discipline here leads with calibration and clue-collection before any fix.
+Foreword: In an attempt to upskill the ML debugging on AI coding assistants (and humans), I've collected high quality sources on ML debugging and the mindset and the "taste". When I started ML I went searching for discussions on best practices, and started a few discussions of my own and they helped me a lot, I hope they can help others. This intro is human written, and the below is AI written with human guidance.
 
 ## Before you debug: calibrate
 
