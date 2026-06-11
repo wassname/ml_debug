@@ -68,3 +68,5 @@ When your loss is a product of factors A*B and one factor can be near zero:
 ```
 
 General principle: if you want gradient to flow independently through two factors, decompose multiplicatively in log space.
+
+You can also design surrogate losses that are better behaved but move in the right direction in a better behaved well.
