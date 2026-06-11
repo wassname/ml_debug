@@ -36,13 +36,15 @@ For modern LLM pretraining, also consider WSD (warmup-stable-decay). Wen et al. 
 
 > In the early stages of setting baselines I like to use Adam with a learning rate of 3e-4. In my experience Adam is much more forgiving to hyperparameters, including a bad learning rate.[^karpathy-recipe]
 
-AdamW remains the robust default. Current nanochat uses a split optimizer: Muon for matrix parameters and AdamW for embeddings and scalar parameters.[^nanochat-optimizer]
+AdamW remains the robust default. Some modern recipes mix AdamW with matrix-style optimizers for selected parameters, but treat that as a recipe to copy deliberately, not a generic substitution.[^nanochat-optimizer]
 
 There is no context-free winner. A controlled benchmark finds that matrix-based optimizers consistently outperform scalar-based ones, but their speedup over AdamW falls from about `1.4x` at `0.1B` to `1.1x` at `1.2B` parameters.[^optimizer-benchmark]
 
 > Optimal choice of optimizer shifts depends on data-to-model ratios.[^optimizer-benchmark]
 
-Muon wins in smaller Chinchilla-ratio regimes in that benchmark, while Kron and Soap overtake it at `8x` or larger.[^optimizer-benchmark] Other work finds Muon expands the compute-time Pareto frontier over AdamW at large batch sizes and up to 4B parameters.[^muon-efficiency] Tune each optimizer fairly, compare at the target scale and training budget, and prefer a proven recipe unless optimizer research is the experiment.
+That benchmark discusses matrix optimizers such as Muon, Soap, and Kron; the point for debugging is the caveat, not a specific winner. Tune each optimizer fairly, compare at the target scale, batch size, data-to-model ratio, and training budget, and prefer a proven recipe unless optimizer research is the experiment.
+
+The disclosed training reports mostly reinforce this boring answer. DeepSeek-V3, OPT-175B, and Llama 3 all disclose AdamW recipes with warmup and decay; DeepSeek-V3 uses AdamW with a warmup, long stable high-LR phase, cosine decay, late lower-LR phase, gradient clipping, and batch-size scheduling.[^deepseek-v3-report] OPT-175B tried vanilla SGD during divergence recovery; "optimization plateaued quickly," and they reverted to AdamW.[^opt175b-report]
 
 ## Better numbers can mean worse learning
 
@@ -60,6 +62,8 @@ Inspect the best run's traces. It may have won by learning a shortcut, formattin
 
 Single-GPU tests can hide distributed failure modes. Keep the frames before a NaN/Inf, not only the crash site.
 
+Modern reports treat infrastructure and numerics as first-class hypotheses, not background. DeepSeek-V3 reports no "irrecoverable loss spikes" or rollbacks after architecture, FP8, high-precision-retention, routing, and schedule co-design.[^deepseek-v3-report] MAI-Thinking-1 says "failures are expected" at thousands of GPUs, and gates nodes through certification before admitting them to production training.[^mai-thinking-report] Llama 3 reports 466 interruptions in a 54-day 405B pretraining window, mostly hardware-related, with automation handling almost all of them.[^llama3-report]
+
 ## Is the model too small?
 
 Do not use a universal parameter-count threshold. Chaudhary et al. measure evaluation-awareness probes across 15 models from `0.27B` to `70B` and report predictable scaling rather than a clean threshold.[^eval-awareness] Test a same-family size ladder and separate "the representation is detectable" from "the model can reliably express the behavior."
@@ -70,6 +74,18 @@ Do not use a universal parameter-count threshold. Chaudhary et al. measure evalu
 
 The reliability paper finds that higher cosine similarity among training-set activation differences predicts more effective steering.[^steering-reliability] Sweep layers and coefficients, inspect per-example effects, compare against prompting and few-shot baselines, and check whether the vector changed the concept or merely style, verbosity, sentiment, or refusal rate.
 
+## What the recent reports add
+
+OLMo 3 is the strongest "how to decide" reference in this set. It says "benchmarks are not perfect decision-making tools"; small models can sit at random chance, small score differences can be benchmark noise, and some tasks should be expanded, clustered, moved out of averages, or removed.[^olmo3-report] Use proxy metrics and signal-to-noise checks before trusting small-scale ablations.
+
+MAI-Thinking-1 gives the eval-design maxim: "Evaluation results are only as informative as the prompts they are computed on."[^mai-thinking-report] A narrow, saturated, or misweighted eval can give tight confidence intervals around the wrong quantity. Treat eval construction as part of the experiment, not bookkeeping.
+
+Hermes 4 is useful for evaluation reproducibility and reasoning-length control. It says an eval score depends on "the inference engine and hardware" as well as the model, so they route benchmarks through one OpenAI-compatible endpoint and log all evaluation samples.[^hermes4-report] For overlong reasoning, Hermes 4 does a targeted second SFT stage that teaches `</think>` termination without training on the whole generated chain.[^hermes4-report]
+
+Qwen3 is the chat-template and mode-control reminder: thinking/non-thinking behavior is part of the data format, not just sampling policy. Qwen3 uses `/think` and `/no_think` flags and exposes `enable_thinking=False` through the tokenizer chat template.[^qwen3-report]
+
+Hermes 4 and Qwen3 both lean on filtered synthetic/verifiable data, but with guardrails: Hermes uses a different judge model from the answer model to reduce judge self-preference, and Qwen3 filters reasoning traces for wrong answers, repetition, guesswork, thinking/summary inconsistency, style shifts, and possible validation overlap.[^hermes4-report][^qwen3-report]
+
 ## Read disclosed-training reports
 
 When debugging or designing a modern transformer run, read reports that disclose the model-building process rather than only final benchmark scores:
@@ -79,9 +95,7 @@ When debugging or designing a modern transformer run, read reports that disclose
 - Nous Research's [Hermes 4](https://arxiv.org/abs/2508.18255) describes failures and solutions across data curation, synthesis, training, and evaluation; Nous also releases open training/evaluation tooling such as [Atropos](https://github.com/NousResearch/atropos).
 - [DeepSeek-V3](https://arxiv.org/abs/2412.19437) reports architecture, infrastructure, training, and a run with no irrecoverable loss spikes or rollbacks.
 - [Qwen3](https://arxiv.org/abs/2505.09388) documents a dense/MoE family from `0.6B` to `235B`, including pretraining and post-training details.
-- [Tulu 3](https://arxiv.org/abs/2411.15124) is a fully open post-training recipe with data, code, evaluation tooling, decontamination, SFT, DPO, and RLVR.
-- [The Llama 3 Herd](https://arxiv.org/abs/2407.21783) is a large-scale end-to-end recipe for pretraining, post-training, safety, long context, multilinguality, coding, and tool use.
-- [OPT-175B](https://arxiv.org/abs/2205.01068) is older, but unusually useful because it documents large-scale training interruptions, instability, and operational fixes.
+- Secondary postmortems: [The Llama 3 Herd](https://arxiv.org/abs/2407.21783) for large-scale pretraining operations, and [OPT-175B](https://arxiv.org/abs/2205.01068) for training interruptions, instability, and mid-flight recovery.
 
 These are useful as working implementations and experiment logs: copy proven priors, compare the exact computation graph and recipe, and look for engineering details absent from method papers.
 
@@ -99,8 +113,14 @@ For experiment design, keep the [Google Deep Learning Tuning Playbook](https://d
 [^karpathy-recipe]: Karpathy, ["A Recipe for Training Neural Networks"](https://karpathy.github.io/2019/04/25/recipe/) ([cache](../docs/evidence/karpathy_recipe_training_nn_2019.md))
 [^nanochat-optimizer]: Karpathy, [`nanochat`](https://github.com/karpathy/nanochat) (`optim.py`: AdamW + Muon)
 [^optimizer-benchmark]: Wen et al., ["Fantastic Pretraining Optimizers and Where to Find Them"](https://arxiv.org/abs/2509.02046) (ICLR 2026)
-[^muon-efficiency]: Pethick et al., ["Practical Efficiency of Muon for Pretraining"](https://arxiv.org/abs/2505.02222)
 [^tuning-playbook]: Google Developers, ["Deep Learning Tuning Playbook"](https://developers.google.com/machine-learning/guides/deep-learning-tuning-playbook)
 [^bekman]: Stas Bekman, [`DebugUnderflowOverflow`](https://github.com/huggingface/transformers/blob/main/src/transformers/debug_utils.py) ([cache](../docs/evidence/bekman_debug_utils_transformers.md))
 [^eval-awareness]: Chaudhary et al., ["Evaluation Awareness Scales Predictably in Open-Weights Large Language Models"](https://arxiv.org/abs/2509.13333)
 [^steering-reliability]: Braun et al., ["Understanding (Un)Reliability of Steering Vectors in Language Models"](https://arxiv.org/abs/2505.22637)
+[^olmo3-report]: OLMo Team, ["Olmo 3"](https://arxiv.org/abs/2512.13961) ([cache](../docs/evidence/reports/olmo3_technical_report.md); [OLMo-core](https://github.com/allenai/OLMo-core), [cache](../docs/evidence/reports/code/olmo_core_readme.md))
+[^mai-thinking-report]: Microsoft AI Team, ["MAI-Thinking-1: Building a Hill-Climbing Machine"](https://microsoft.ai/pdf/mai-thinking-1.pdf) ([cache](../docs/evidence/reports/mai_thinking_1_technical_report.md))
+[^hermes4-report]: Nous Research, ["Hermes 4 Technical Report"](https://arxiv.org/abs/2508.18255) ([cache](../docs/evidence/reports/hermes4_technical_report.md); [Atropos](https://github.com/NousResearch/atropos), [cache](../docs/evidence/reports/code/nous_atropos_readme.md))
+[^deepseek-v3-report]: DeepSeek-AI, ["DeepSeek-V3 Technical Report"](https://arxiv.org/abs/2412.19437) ([cache](../docs/evidence/reports/deepseek_v3_technical_report.md))
+[^qwen3-report]: Qwen Team, ["Qwen3 Technical Report"](https://arxiv.org/abs/2505.09388) ([cache](../docs/evidence/reports/qwen3_technical_report.md))
+[^llama3-report]: Meta AI, ["The Llama 3 Herd of Models"](https://arxiv.org/abs/2407.21783) ([cache](../docs/evidence/reports/llama3_herd_technical_report.md))
+[^opt175b-report]: Zhang et al., ["OPT: Open Pre-trained Transformer Language Models"](https://arxiv.org/abs/2205.01068) ([cache](../docs/evidence/reports/opt175b_technical_report.md))
