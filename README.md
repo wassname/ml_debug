@@ -12,7 +12,9 @@ Or paste `SKILL.md` into your system prompt / context when debugging.
 
 ## What's here
 
-- **[SKILL.md](SKILL.md)** -- the main artifact. Load into an LLM agent's context as a debugging skill. Leads with the mindset (calibrate, mental models, general debugging tricks, and reading a working implementation when stuck), then a folklore section of sourced quotes, then an LLM-agent playbook (debugging loop, triage menu, anti-patterns). Deeper one-off tricks (loss-surface analysis, stuck-metric diagnosis, sweep reliability) live in [refs/](refs/).
+- **[SKILL.md](SKILL.md)** -- the main artifact. Load into an LLM agent's context as a debugging skill. A short calibration note, then the folklore itself: verbatim sourced quotes from practitioners, general lessons first, modern transformers and LLM fine-tuning in their own section.
+
+- **[PLAYBOOK.md](PLAYBOOK.md)** -- the synthesized long-form: mental models, practitioner priors, step catalogs, symptom tables, the agent debugging loop, triage, and anti-patterns. Menus of hypotheses distilled from the same sources, not quotes. Deeper one-off tricks (loss-surface analysis, stuck-metric diagnosis, sweep reliability) live in [refs/](refs/).
 
 - **[docs/evidence/](docs/evidence/)** -- frozen local copies of source material (blog posts, talks, papers, reddit threads). Claims in SKILL.md link back to exact quotes here.
 
