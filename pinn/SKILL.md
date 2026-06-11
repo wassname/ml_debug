@@ -6,9 +6,6 @@ description: "PINN (Physics-Informed Neural Network) training best practices and
 
 # PINN Training Best Practices
 
-https://gist.github.com/wassname/a68314f731002b32aa637c3d43a081c9/edit
-
-
 Consolidated from: NeuralPDE.jl tests/docs, ConFIG repo, Wang et al. 2021, Rathore et al. 2024 (ICML), ml_debug folklore, and practical experience. Heat-exchanger-specific notes in [refs/heat_exchanger.md](refs/heat_exchanger.md).
 
 Epistemic status: Patterns confirmed across multiple sources. Where sources disagree, noted. Paper claims marked with credence estimates.

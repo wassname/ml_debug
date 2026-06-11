@@ -324,4 +324,4 @@ Folklore sources (the quotes above trace to these):
 
 For modern transformer pretraining specifically (most sources above predate it), see [Karpathy's recipe](https://karpathy.github.io/2019/04/25/recipe/) and the [nanochat deepwiki](https://deepwiki.com/karpathy/nanochat) (320+ empirical HP sweeps for a GPT-2-scale run). For LLM-as-judge eval debugging workflow more broadly, Hamel Husain's ["Your AI Product Needs Evals"](https://hamel.dev/blog/posts/evals/) covers the error-analysis-first approach for LLM products. Most multi-source claims trace to quotes in [docs/ml_debug_folklore.argdown](docs/ml_debug_folklore.argdown) (vargdown); the full evidence set is in [docs/evidence/](docs/evidence/).
 
-Curated by [wassname](https://github.com/wassname). Companion gist: https://gist.github.com/wassname/d72da69ffe1bdb60cdb1708bd3b5c535
+Curated by [wassname](https://github.com/wassname).
