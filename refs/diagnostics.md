@@ -112,7 +112,7 @@ with torch.no_grad():
 # If very different: model sees real signal. Problem is elsewhere.
 ```
 
-**NaN poisoning (leakage tracer)** [wassname; forward-pass dual of Karpathy's gradient check below]
+**NaN poisoning (leakage tracer)** [Wassname; forward-pass dual of Karpathy's gradient check below]
 ```python
 # Leakage can hide anywhere: normalization fit on the full dataset, target
 # leaking into features, window functions peeking ahead, bad splits. Instead

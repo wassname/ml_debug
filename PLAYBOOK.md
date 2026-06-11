@@ -36,7 +36,7 @@ For RL, add reward scale/sign as a top-3 issue, and episode-boundary handling (d
 
 | Signal | Likely meaning | Check |
 |--------|----------------|-------|
-| Init loss << expected (e.g. 0.01 vs 2.3) | Leakage or a shortcut: the model "knows" the answer at init | Are labels in the input? Is test data in train? A trivial feature? Localize with the NaN-poisoning tracer or backprop-to-input check ([refs/diagnostics.md](refs/diagnostics.md)) |
+| Init loss << expected (e.g. 0.01 vs 2.3) | Leakage or a shortcut: the model "knows" the answer at init | Are labels in the input? Is test data in train? A trivial feature? Localize with Wassname's NaN-poisoning tracer or backprop-to-input check ([refs/diagnostics.md](refs/diagnostics.md)) |
 | Random input gives the same loss as real input | Pipeline is destroying information (over-aggressive preprocessing, wrong transforms, all-zero input) | Print raw data at each stage; visualize |
 | Predicts the same class for everything | Class imbalance (100:1 -> "always predict majority") | Label-count check; weighted loss or resample |
 | Val much worse than train from the start | Distribution shift between splits | Same preprocessing? Same time period? Same source? |
@@ -187,7 +187,7 @@ These are the overconfident reflexes the "calibrate" section warns about, made c
 - `try/except` around training code. Training should crash loudly. A caught exception hides the bug and produces silently wrong results. The one exception is checkpoint-on-KeyboardInterrupt.
 - "Try a different optimizer." If Adam doesn't converge, it's almost never the optimizer; it's the loss, the data, the architecture, or a bug.
 - `.detach()` / `.item()` to "fix" gradient errors. If autograd complains, the graph is wrong. Detaching silences it by cutting gradient flow, so the model just stops learning from that path.
-- `lr_scheduler` as a *cure for non-convergence*. Schedules matter (transformers need warmup; OneCycle/cosine can work well; AdamW is a common pairing), but they refine or enable convergence in an otherwise-healthy setup; they don't rescue a model that can't learn at constant LR because of a bug. Add the schedule once the basics work, not as a debugging band-aid. An LR range test is a separate short run that increases LR until loss stops improving or diverges; use it to choose a candidate `max_lr` before a OneCycle run.
+- `lr_scheduler` as a *cure for non-convergence*. Schedules matter (transformers need warmup; WSD, OneCycle, or cosine can work well in different regimes; AdamW is a common pairing), but they refine or enable convergence in an otherwise-healthy setup; they don't rescue a model that can't learn at constant LR because of a bug. Use an LR range test or published recipe to choose a candidate maximum LR before a schedule run.
 - More layers / a bigger model. If it can't overfit one batch, more parameters won't help. The problem is gradient flow, loss, or data.
 - "Normalize your data" without checking whether it already is. Run the data sanity check first.
 - `float()` / `.to(dtype)` to suppress type warnings. Type mismatches are signals; a float32/float64 mismatch might mean you're mixing model weights with double-precision data. Fix the root cause.

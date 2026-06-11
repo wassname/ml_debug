@@ -9,10 +9,9 @@ Foreword: In an attempt to upskill the ML debugging on AI coding assistants (and
 
 ## How to read this
 
-If you're an LLM agent, calibrate yourself first. ML research code is often outside your training distribution: novel losses, custom architectures, methods with no canonical right answer you've seen a thousand times. The trained reflex there is to be confident and fast, to pattern-match a symptom to a fix ("loss stuck -> drop the LR") and apply it, and on possibly-buggy research code that reflex wastes a run and corrupts the evidence you need to find the real cause. The quotes below are the counter-evidence, in the words of people who paid for these lessons in months of wasted runs. If you notice yourself converging on the first plausible hypothesis, read [Rahtz](#think-more-experiment-less); if you're reaching for hyperparameters, read [Jones](#assume-you-have-a-bug); if the code looks like it's working, read [Achiam](#broken-code-fails-silently-measure-everything-spinning-up); if you're about to declare the fix done, read [Nanda](#default-to-disbelieving-your-own-results-neel-nanda).
-<!-- TODO say what they suggest not just to read thenm -->
+If you're an LLM agent, calibrate yourself first. ML research code is often outside your training distribution: novel losses, custom architectures, methods with no canonical right answer you've seen a thousand times. The trained reflex there is to be confident and fast, to pattern-match a symptom to a fix ("loss stuck -> drop the LR") and apply it, and on possibly-buggy research code that reflex wastes a run and corrupts the evidence you need to find the real cause. The quotes below are the counter-evidence, in the words of people who paid for these lessons in months of wasted runs. Before acting: form competing hypotheses and identify evidence that distinguishes them ([Rahtz](#think-more-experiment-less)); assume a correctness bug before tuning ([Jones](#assume-you-have-a-bug)); instrument silent failure paths and test more than one setup ([Achiam](#broken-code-fails-silently-measure-everything-spinning-up)); inspect the data and seek falsifiers before believing the result ([Nanda](#default-to-disbelieving-your-own-results-neel-nanda)).
 
-These are common failure modes worth ruling out, not a complete diagnosis of your situation; you know your system and I don't. Checklists, diagnostics, and symptom catalogs are one hop away under [Reference](#reference-one-hop-away).
+These are common failure modes worth ruling out, not a complete diagnosis of your situation; you know your system and I don't. Checklists, diagnostics, and symptom catalogs are one hop away under [Reference](#reference-one-hop-away). The short version of Rahtz plus the tuning playbook is: compare several possible worlds, predict what evidence differs between them, then run the narrowest experiment that can actually distinguish them.
 
 ## Folklore
 
@@ -276,20 +275,27 @@ Their training-stability page adds the masking check ("inspect tokenized samples
 Open the relevant one when the task calls for it. These are synthesized checklists and menus, useful for widening a hypothesis search but not authoritative for your particular system:
 
 - [PLAYBOOK.md](PLAYBOOK.md) — the long-form version: mental models and practitioner priors, the general step catalog (component isolation, baseline ladder, what to log, numerical hygiene), symptom tables, the agent debugging loop, triage, and anti-patterns.
+- [refs/checklist.md](refs/checklist.md) — Lones's full 36-item do/don't checklist across data, building, evaluation, comparison, and reporting.
 - [refs/diagnostics.md](refs/diagnostics.md) — copy-paste diagnostic snippets: init-loss check, overfit-one-batch, gradient-flow check, NaN hooks, NaN-poisoning leakage tracer, backprop-to-input dependency check, class-imbalance check.
 - [refs/static_analysis.md](refs/static_analysis.md) — grep patterns for silent bugs (shape mismatches, autograd breakers, double softmax, step ordering, leakage).
 - [refs/loss_surface.md](refs/loss_surface.md) — visualize a loss surface and its gradient field with synthetic tensors, no model or GPU, for when a custom loss misbehaves.
 - [refs/metric_stuck.md](refs/metric_stuck.md) — "why won't this metric move?" plus the structural-ceiling check.
 - [refs/sweeps.md](refs/sweeps.md) — same-seed paired comparison and cross-seed t-stat reliability, for before you claim method A beats method B.
 - [refs/llm_judges.md](refs/llm_judges.md) — LLM-as-a-judge biases (position, verbosity, self-preference) and the mitigation checklist, for when an LLM-judged eval looks too good.
-- TODO add one for transformers and move things there, include things like warmup, best learner, importance of logging full traces (incl. special tokens, sys prompt, completion). Emperical evidence of what models are too small for what (e.g. eval awareness has only been document in models 25B+ afaik and mostly 100B+, conceptual steering hardly works in models <2B which are mostly just confused)
+- [refs/transformers.md](refs/transformers.md) — transformer-specific folklore: full traces, warmup/LR, optimizer evidence, train-deploy parity, scale priors, steering, and disclosed-training reports.
 - [rl/SKILL.md](rl/SKILL.md) — RL-specific: probe environments, reward engineering, HP defaults, reference implementations.
 - [pinn/SKILL.md](pinn/SKILL.md) — physics-informed networks: nondimensionalization, gradient pathologies, curriculum.
 
 ## Links and further reading
 
+Start here rather than treating the bibliography as flat:
+
+- **Beginner / broad checklist:** Lones, ["How to avoid machine learning pitfalls"](https://arxiv.org/abs/2108.02497), with its full do/don't list extracted in [refs/checklist.md](refs/checklist.md).
+- **Debugging a neural net:** Karpathy, ["A Recipe for Training Neural Networks"](https://karpathy.github.io/2019/04/25/recipe/).
+- **Designing tuning experiments:** Google, [Deep Learning Tuning Playbook](https://developers.google.com/machine-learning/guides/deep-learning-tuning-playbook).
+- **Transformer and LLM runs:** [refs/transformers.md](refs/transformers.md), then the HF, Axolotl, Unsloth, nanochat, and Bekman sources below.
+
 Folklore sources (the quotes above trace to these):
-<!-- might be worth highlighing once that can serve as reference material for particular things, or have a lot more depth on a topic. e.g. "How to avoid machine learning pitfalls", is reccomedned for begginner and checklists but it gets lost in the bibliography. also we should extract that into an actualy cehcklist appendix -->
 
 [^jones]: Andy Jones, "Debugging RL, Without the Agonizing Pain" — https://andyljones.com/posts/rl-debugging.html ([cache](docs/evidence/andyljones_rl_debugging.md): anomalies L103-109, write-from-scratch L155, assume-bug L176-180, raise-threshold L182, loss-curve L186-188)
 [^rahtz]: Matthew Rahtz (Amid Fish), "Lessons Learned Reproducing a Deep RL Paper" — http://amid.fish/reproducing-deep-rl ([cache](docs/evidence/amid_fish_reproducing_deep_rl.md): frame-diff confusion L85-87, investigate-confusion L100-102, think-more L145-153, don't-implement-RL-yourself L497-501)
@@ -320,7 +326,7 @@ Folklore sources (the quotes above trace to these):
 [^axolotl]: Axolotl, "Debugging" (general tips: Hamel Husain) — https://docs.axolotl.ai/docs/debugging.html ([cache](docs/evidence/axolotl_debugging.md): simplify L31, one-process L37, small-model + fast-iteration L48-49, caches L54-58)
 [^axolotl-stability]: Axolotl, "Training Stability" — https://docs.axolotl.ai/docs/training_stability.html ([cache](docs/evidence/axolotl_training_stability.md): metrics-from-the-start L27, inspect-tokenized-masking L67, reward-fn-standalone L99)
 [^ng-mly]: Andrew Ng, *Machine Learning Yearning* (2018 draft), ch. 13-19 on error analysis — https://github.com/ajaymache/machine-learning-yearning ([cache](docs/evidence/ng_ml_yearning_error_analysis.md): build-first-system L10, 100-examples procedure L14-20, Eyeball/Blackbox dev sets L32)
-[^tuning-playbook]: Godbole, Dahl, Gilmer, Shallue, Nado, "Deep Learning Tuning Playbook" (Google Research, 2023) — https://github.com/google-research/tuning_playbook ([cache](docs/evidence/google_tuning_playbook.md): exploration-over-exploitation L24, scientific/nuisance/fixed L34-38, incremental-tuning L14-18)
+[^tuning-playbook]: Godbole, Dahl, Gilmer, Shallue, Nado, "Deep Learning Tuning Playbook" (Google Research / Google Developers, 2023; Google Developers page last updated 2025-08-25) — https://developers.google.com/machine-learning/guides/deep-learning-tuning-playbook ([cache](docs/evidence/google_tuning_playbook.md): exploration-over-exploitation L24, scientific/nuisance/fixed L34-38, incremental-tuning L14-18)
 [^domingos]: Pedro Domingos, "A Few Useful Things to Know About Machine Learning" (CACM, Oct 2012) — https://homes.cs.washington.edu/~pedrod/papers/cacm12.pdf ([cache](docs/evidence/domingos_2012_few_useful_things.md): test-on-train illusion L20, insidious-contamination L22, overfitting-bugbear L26, features-are-key L32)
 [^bekman-book]: Stas Bekman, *Machine Learning Engineering Open Book*, "Understanding Training Loss Patterns" + "Instabilities" — https://github.com/stas00/ml-engineering ([cache](docs/evidence/bekman_ml_engineering_instabilities.md): heartbeat L10, 104B post-mortem L18, spike types + bad-data-pocket L22-24, init-std L28-32, PaLM batch-skipping L36, logbooks L40)
 [^lones]: Michael A. Lones, "How to avoid machine learning pitfalls" (2021, updated annually) — https://arxiv.org/abs/2108.02497 ([cache](docs/evidence/lones_2021_ml_pitfalls.md): full do/don't TOC L18-22, leakage L26, look-ahead bias L30). Aimed at beginners but the most exhaustive checklist here: 36 do/don'ts across data prep, training, evaluation, comparison, and reporting.
