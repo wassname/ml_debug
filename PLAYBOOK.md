@@ -133,7 +133,7 @@ Roughly in this order, though the point is the underlying mindset:
 
 **Collect clues before theorizing.** Read the traceback and logs. Run static analysis ([refs/static_analysis.md](refs/static_analysis.md)) and the cheap diagnostics ([refs/diagnostics.md](refs/diagnostics.md): data sanity check, init-loss check, overfit-one-batch). If you catch yourself proposing a fix before you've looked at anything, stop.
 
-**Hold several hypotheses at once; resist converging early.** Unless the cause is already obvious (a traceback usually points right at it), generate at least three genuinely different possible worlds before ranking any, so you don't marry the first one. Use the five lenses in Mental models. Put a rough credence/prior on each world, including an explicit unknown bucket when useful. Then sanity-check yourself with:
+**Hold several hypotheses at once; resist converging early.** Unless the cause is already obvious (a traceback usually points right at it), generate at least three genuinely different hypotheses before ranking any, so you don't marry the first one. Use the five lenses in Mental models. Put a rough credence/prior on each, including an explicit unknown bucket when useful. Then sanity-check yourself with:
 - *Bug*: a boring implementation/data/loss bug, with high prior until checked.
 - *Likely*: your strongest ordinary explanation.
 - *Subtle*: the sneaky one, like sample size, leakage, a confound, a metric artifact, or plain seed variance masquerading as signal.
@@ -141,7 +141,7 @@ Roughly in this order, though the point is the underlying mindset:
 - *Null*: there's no real effect, or it comes from something else you also changed.
 - *Unknown*: probability mass for a cause you have not imagined.
 
-For each world, write `Prior: ...; Expect: ...; Check: ...`. Anchor priors on Practitioner priors above, but a clue that points elsewhere overrides them outright. Prefer the cheapest check that most changes the credences across worlds. Keep observations (reproducible, auditable) separate from inferences, so you can rethink without degrading the evidence.
+For each hypothesis, write `Prior: ...; Expect: ...; Check: ...`. Anchor priors on Practitioner priors above, but a clue that points elsewhere overrides them outright. Prefer the cheapest check that most changes the credences across hypotheses. Keep observations (reproducible, auditable) separate from inferences, so you can rethink without degrading the evidence.
 
 **Run the cheapest observation that splits your top hypotheses.** Not the most thorough experiment, the most *discriminating* one. Forward-predict each hypothesis ("what would I see if this were the cause?"); a test is strong evidence only where the predictions diverge. A grad-norm line reading ~0 under "dead layer" but healthy under "LR too low" beats a 4-hour sweep that only confirms what you believed.
 

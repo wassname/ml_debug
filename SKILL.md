@@ -1,21 +1,18 @@
 ---
 name: ml-debug
-description: "Wassname's practical folklore for debugging ML systems: convergence, gradients, stuck metrics, sweep reliability, same-seed comparisons. Use when stuck on training, designing sweeps, or analyzing results. Verbatim quotes from practitioners; catalogs and diagnostics are one hop away."
+description: "Wassname's practical folklore for debugging ML systems: convergence, gradients, stuck metrics, sweep reliability, same-seed comparisons. Use when stuck on training, designing sweeps, or analyzing results. Verbatim quotes from practitioners, with linked checklists and diagnostics."
 ---
 
 # wassname's ML Debugging Folklore
 
-Foreword: In an attempt to upskill the ML debugging on AI coding assistants (and humans), I've collected high quality sources on ML debugging and the mindset and the "taste". When I started ML I went searching for discussions on best practices, and started a few discussions of my own and they helped me a lot, I hope they can help others. This intro is human written, and the below is AI written with human guidance.
+Foreword: In an attempt to upskill the ML debugging on AI coding assistants (and humans), I've collected high quality sources on ML debugging and the mindset and the "taste". When I started ML I went searching for discussions on best practices, and started a few discussions of my own and they helped me a lot, I hope they can help others. This intro is human written, and the below is AI written with human guidance, but focuses heavily on collecting qoutes from external sources.
 
 ## How to read this
 
-> Wassname's debugging loop (unpublished): write at least three possible worlds before acting: the most likely failure, a subtle failure, a perverse failure, a possible bug, and an unknown if relevant. Put a rough credence/prior on each. For each world, say what you expect to see differently and the cheapest evidence that would distinguish it.
+If you're an LLM agent, calibrate yourself first to be less overconfident and to consider a wide range of hypothesis, then you can use your judgment to try and understand and narrow down a problem. ML research code is often outside your training distribution, and you might have a trained reflex to pattern-match a symptom to a fix ("loss stuck -> drop the LR"), this wastes a run and confuses future agents which take it as authorititive. The folklore below is meant to ground you, widen the hypothesis space, and rule out the obvious. As always take these as suggestions or ideas, they may or may not be relevent to your problem, so use you calibrated and grounded judgement. Checklists, diagnostics, and symptom catalogs are linked under [Reference](#reference).
 
-If you're an LLM agent, calibrate yourself first. ML research code is often outside your training distribution: novel losses, custom architectures, methods with no canonical right answer you've seen a thousand times. The trained reflex there is to be confident and fast, to pattern-match a symptom to a fix ("loss stuck -> drop the LR") and apply it, and on possibly-buggy research code that reflex wastes a run and corrupts the evidence you need to find the real cause. The quotes below are the counter-evidence, in the words of people who paid for these lessons in months of wasted runs. Before acting: form competing hypotheses and identify evidence that distinguishes them ([Rahtz](#think-more-experiment-less)); assume a correctness bug before tuning ([Jones](#assume-you-have-a-bug)); instrument silent failure paths and test more than one setup ([Achiam](#broken-code-fails-silently-measure-everything-spinning-up)); inspect the data and seek falsifiers before believing the result ([Nanda](#default-to-disbelieving-your-own-results-neel-nanda)).
-
-These are common failure modes worth ruling out, not a complete diagnosis of your situation; you know your system and I don't. Checklists, diagnostics, and symptom catalogs are one hop away under [Reference](#reference-one-hop-away). The short version of Rahtz plus the tuning playbook is: compare at least three possible worlds, put rough credences on them, include a bug and an unknown if relevant, predict what evidence differs between them, then run the narrowest experiment that can actually distinguish them.
-
-## Folklore
+Here's a way of thinking that I've found useful for coding assistance in debugging while keeping an open mind, please do this an show the user: 
+> before acting, write competing hypotheses: consider at least the most likely failure, a subtle failure, a perverse failure, a possible bug, and an unknown. Put a rough credence on each and show the user. Think about what you expect to see differently for each possiblity and the cheapest evidence that would likely narrow them down - wassname
 
 ### Assume you have a bug
 
@@ -28,6 +25,8 @@ A bug can also hide, because most ML models have multiple adaptive parts: "If on
 ### Think more, experiment less
 
 > Switching from experimenting a lot and thinking a little to experimenting a little and thinking a lot was a key turnaround in productivity. When debugging with long iteration times, you really need to *pour* time into the hypothesis-forming step - thinking about what all the possibilities are, how likely they seem on their own, and how likely they seem in light of everything you've seen so far. Spend as much time as you need, even if it takes 30 minutes, or an hour. Reserve experiments for once you've fleshed out the hypothesis space as thoroughly as possible and know which pieces of evidence would allow you to best distinguish between the different possibilities.[^rahtz]
+
+## Folklore
 
 ### Don't write RL from scratch; diff against a reference
 
@@ -72,13 +71,13 @@ So instrument heavily, because "you can't tell it's broken if you can't see that
 
 ### Read what you actually wrote, not what you meant (gwern)
 
-You can't see your own work clearly, which is why fresh eyes (or a fresh-eyes subagent) catch what you can't:
-
 > you can't find typos in your own writing without a great deal of effort because you know what it's *supposed* to say; so copyediting advice runs like 'read it out loud' or 'print it out and read it' or 'wait a week' [...] or even 'read it upside down'. That's the sort of thing it takes to force you to read what you actually wrote, and not what you thought you wrote.[^gwern-unseeing]
+
+This is why fresh eyes (or a fresh-eyes subagent) catch what you can't.
 
 ### Never accept the kludge (Patrick Kidger)
 
-Why is research code so reliably buggy? Kidger's blunt answer:
+Kidger, on why research code is so reliably buggy:
 
 > Academic software is almost always a poorly-maintained kludge of leaky abstractions, awful formatting, and bugs that don't cripple things only because some other bug stops them from doing so.[^kidger]
 
@@ -90,7 +89,7 @@ His fix is a posture, "never accept the kludge": messed up your git repo? Find t
 
 > When someone's RL implementation isn't working, they *luuuuuurv* to copy-paste a screenshot of their loss curve to you. They do this because they know they want a pretty, exponentially-decaying loss curve, and they know what they have *isn't that*. The problem with using the loss curve as an indicator of correctness is somewhat that it's not reliable, but mostly because it doesn't localise errors. The shape of your loss curve says very little about where in your code you've messed up, and so says very little about what you need to change to get things working.[^jones]
 
-(But sometimes they are not, they seperate underfitting and over, gradient explosion vs vanishing, saturation vs not... and so on)
+(But sometimes they are not, they separate underfitting and over, gradient explosion vs vanishing, saturation vs not... and so on)
 
 ### Inspect the data first
 
@@ -104,7 +103,7 @@ Andrew Ng's error-analysis procedure is the same move applied after your first t
 
 ### Labels are often wrong (koaning)
 
-Even benchmark data is dirtier than you think. Vincent Warmerdam:
+Vincent Warmerdam:
 
 > It turns out that bad labels are a *huge* problem in many popular benchmark datasets.[^koaning]
 
@@ -210,17 +209,15 @@ lucidrains' x-transformers is a catalogue of training tricks, each tied to its p
 
 > We are nearing the point of wiping out a source of transformer training instability with one simple intervention.[^lucidrains]
 
-Scaled-up recipes accumulate these one-line stability fixes in code long before they're written up, which is the whole case for reading a working implementation.
+Scaled-up recipes accumulate these one-line stability fixes in code long before they're written up.
 
 ### Modern LLM-pretraining gotchas (nanochat)
 
-Karpathy's nanochat is one of the few public records of what scaling a transformer from scratch actually takes. Two gotchas worth stealing:
+Karpathy's nanochat is one of the few public records of what scaling a transformer from scratch actually takes. Two gotchas:
 
 > The 'lower validation loss' from BOS-alignment is misleading—it's just fewer noisy tokens, not better learning.[^nanochat]
 
 > If any rank's gradient contains inf, all ranks must clip to avoid divergence.[^nanochat]
-
-The first is a better number that isn't better learning; the second is a multi-GPU bug that single-GPU testing hides.
 
 ### When NaN hits, look at the frames before it (Stas Bekman)
 
@@ -254,7 +251,7 @@ The HF LLM course debugging chapter is a worked narrative in the Karpathy-recipe
 
 ### Chat template and BOS handling must match across train and deploy (unsloth)
 
-When a model trains fine but produces nonsense after export to llama.cpp or Ollama, the weights are usually innocent:
+When a model trains fine but produces nonsense after export to llama.cpp or Ollama, the cause is usually not the weights:
 
 > The most common cause of this error is using an **incorrect chat template**. It's essential to use the SAME chat template that was used when training the model in Unsloth and later when you run it in another framework, such as llama.cpp or Ollama. [...] It might also be because your inference engine adds an unnecessary "start of sequence" token (or the lack of thereof on the contrary) so ensure you check both hypotheses![^unsloth]
 
@@ -272,7 +269,7 @@ Axolotl's debugging guide (the general tips trace to Hamel Husain) gives the min
 
 Their training-stability page adds the masking check ("inspect tokenized samples to confirm only the target tokens are trainable") and, bluntly: "Debugging a failed run without metrics is guesswork."[^axolotl-stability]
 
-## Reference (one hop away)
+## Reference
 
 Open the relevant one when the task calls for it. These are synthesized checklists and menus, useful for widening a hypothesis search but not authoritative for your particular system:
 

@@ -38,7 +38,7 @@ with torch.no_grad():
 # If init loss >> expected: wrong loss fn, bad init, or data pipeline broken
 ```
 
-**Overfit-one-batch test**
+**Overfit-one-batch test** [Ng / torch lightning]
 ```python
 model.train()
 batch = next(iter(train_loader))
@@ -112,7 +112,7 @@ with torch.no_grad():
 # If very different: model sees real signal. Problem is elsewhere.
 ```
 
-**NaN poisoning (leakage tracer)** [Wassname; forward-pass dual of Karpathy's gradient check below]
+**NaN poisoning (leakage tracer)** [Wassname
 ```python
 # Leakage can hide anywhere: normalization fit on the full dataset, target
 # leaking into features, window functions peeking ahead, bad splits. Instead
